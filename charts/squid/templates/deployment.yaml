@@ -8,6 +8,10 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- with .Values.strategy }}
+  strategy:
+    {{- toYaml . | trim | nindent 4 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "helmproj.selectorLabels" . | nindent 6 }}
@@ -37,14 +41,17 @@ spec:
             - name: squid
               containerPort: {{ .Values.service.internalPort | default "3128" }}
               protocol: TCP
-          # livenessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: http
-          # readinessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: http
+          livenessProbe:
+            exec:
+              command:
+                - /usr/sbin/squid
+                - -k
+                - parse
+{{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            tcpSocket:
+              port: 3128
+{{- toYaml .Values.readinessProbe | nindent 12 }}
           {{- if .Values.volumeMounts }}
           volumeMounts:
             - name: squid-data-vol
@@ -53,7 +60,7 @@ spec:
               mountPath: /etc/squid/squid.conf
               subPath: squid.conf
             {{- range $key, $val := .Values.volumeMounts.configmaps }}
-            - name: {{ $key }}
+            - name: {{  regexReplaceAll "[._]" $key "-" }}
               mountPath: {{ $.Values.volumeMountsPath.configmaps }}/{{ $key }}
               subPath: {{ $key }}
               readOnly: true
@@ -98,14 +105,14 @@ spec:
             - key: squid.conf
               path: squid.conf
         {{- range $key, $val := .Values.volumeMounts.configmaps }}
-        - name: {{ $key }}
+        - name: {{  regexReplaceAll "[._]" $key "-" }}
           configMap:
-            name: {{ template "helmproj.fullname" . }}-vols
+            name: {{ template "helmproj.fullname" $ }}-vols
         {{- end }}
         {{- range $key, $val := .Values.volumeMounts.secrets }}
         - name: {{ $key }}
           secret:
-            secretName: {{ template "helmproj.fullname" . }}-vols
+            secretName: {{ template "helmproj.fullname" $ }}-vols
         {{- end }}
 
       {{- with .Values.nodeSelector }}
