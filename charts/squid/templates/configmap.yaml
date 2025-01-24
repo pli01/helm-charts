@@ -1,9 +1,0 @@
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: "{{ template "squid.name" . }}-config"
-  labels:
-    app: "{{ template "squid.name" . }}"
-data:
-  squid.conf: |
-{{ .Values.config | indent 4 }}
