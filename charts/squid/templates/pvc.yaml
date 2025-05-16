@@ -3,6 +3,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: {{ template "helmproj.fullname" . }}-data
+  namespace: {{ include "helmproj.namespace" . | quote }}
 spec:
   accessModes:
     - {{ .Values.pvc.accessModes | default "ReadWriteMany" | quote }}

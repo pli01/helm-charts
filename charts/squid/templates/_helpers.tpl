@@ -60,3 +60,14 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
+*/}}
+{{- define "helmproj.namespace" -}}
+    {{- if .Values.namespaceOverride -}}
+        {{- print .Values.namespaceOverride -}}
+    {{- else -}}
+        {{- print .Release.Namespace -}}
+    {{- end }}
+{{- end -}}

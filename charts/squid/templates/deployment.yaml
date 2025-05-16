@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "helmproj.fullname" . }}
+  namespace: {{ include "helmproj.namespace" . | quote }}
   labels:
     {{- include "helmproj.labels" . | nindent 4 }}
 spec:
