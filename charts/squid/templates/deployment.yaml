@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "helmproj.fullname" . }}
-  namespace: {{ include "helmproj.namespace" . | quote }}
+  name: {{ include "squid.fullname" . }}
+  namespace: {{ include "squid.namespace" . | quote }}
   labels:
-    {{- include "helmproj.labels" . | nindent 4 }}
+    {{- include "squid.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -15,7 +15,7 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "helmproj.selectorLabels" . | nindent 6 }}
+      {{- include "squid.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -23,7 +23,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "helmproj.selectorLabels" . | nindent 8 }}
+        {{- include "squid.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -33,7 +33,7 @@ spec:
       initContainers:
 {{ toYaml .Values.initContainers | indent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "helmproj.serviceAccountName" . }}
+      serviceAccountName: {{ include "squid.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       {{- if .Values.dnsPolicy }}
@@ -54,11 +54,11 @@ spec:
               containerPort: {{ .Values.service.internalPort | default "3128" }}
               protocol: TCP
           livenessProbe:
-            exec:
-              command:
-                - /usr/sbin/squid
-                - -k
-                - parse
+#            exec:
+#              command:
+#                - /usr/sbin/squid
+#                - -k
+#                - parse
             {{- if .Values.livenessProbe }}
 {{- toYaml .Values.livenessProbe | nindent 12 }}
             {{- end }}
@@ -68,6 +68,10 @@ spec:
           {{- end }}
           {{- if .Values.volumeMounts }}
           volumeMounts:
+            - name: run
+              mountPath: /run
+            - name: var-log
+              mountPath: /var/log/squid
             - name: squid-data-vol
               mountPath: /var/spool/squid
             - name: squid-config-vol
@@ -91,11 +95,11 @@ spec:
           envFrom:
             {{- if .Values.envFrom.configmaps }}
             - configMapRef:
-                name: {{ template "helmproj.fullname" . }}
+                name: {{ template "squid.fullname" . }}
             {{- end }}
             {{- if .Values.envFrom.secrets }}
             - secretRef:
-                name: {{ template "helmproj.fullname" . }}
+                name: {{ template "squid.fullname" . }}
             {{- end }}
           {{- end }}
           {{- end }}
@@ -109,10 +113,14 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       volumes:
+        - name: run
+          emptyDir: {}
+        - name: var-log
+          emptyDir: {}
         - name: squid-data-vol
           {{- if .Values.pvc }}
           persistentVolumeClaim:
-            claimName: {{ template "helmproj.fullname" . }}-data
+            claimName: {{ template "squid.fullname" . }}-data
           {{- else }}
           emptyDir:
             medium: "{{ .Values.tmp.medium }}"
@@ -120,19 +128,19 @@ spec:
           {{- end }}
         - name: squid-config-vol
           configMap:
-            name: {{ template "helmproj.fullname" . }}-config
+            name: {{ template "squid.fullname" . }}-config
             items:
             - key: squid.conf
               path: squid.conf
         {{- range $key, $val := .Values.volumeMounts.configmaps }}
         - name: {{  regexReplaceAll "[._]" $key "-" }}
           configMap:
-            name: {{ template "helmproj.fullname" $ }}-vols
+            name: {{ template "squid.fullname" $ }}-vols
         {{- end }}
         {{- range $key, $val := .Values.volumeMounts.secrets }}
         - name: {{ $key }}
           secret:
-            secretName: {{ template "helmproj.fullname" $ }}-vols
+            secretName: {{ template "squid.fullname" $ }}-vols
         {{- end }}
 
       {{- with .Values.nodeSelector }}

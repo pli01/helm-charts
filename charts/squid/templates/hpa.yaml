@@ -2,15 +2,15 @@
 apiVersion: autoscaling/v2beta1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "helmproj.fullname" . }}
-  namespace: {{ include "helmproj.namespace" . | quote }}
+  name: {{ include "squid.fullname" . }}
+  namespace: {{ include "squid.namespace" . | quote }}
   labels:
-    {{- include "helmproj.labels" . | nindent 4 }}
+    {{- include "squid.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "helmproj.fullname" . }}
+    name: {{ include "squid.fullname" . }}
   minReplicas: {{ .Values.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.autoscaling.maxReplicas }}
   metrics:

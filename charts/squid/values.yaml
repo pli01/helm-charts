@@ -5,10 +5,10 @@ replicaCount: 1
 
 image:
   repository: ubuntu/squid
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   # https://hub.docker.com/r/semaphoreui/semaphore/tags
-  tag: "6.10-24.10_edge"
+  tag: "edge"
 
 #strategy: {}
 strategy:
@@ -64,33 +64,6 @@ volumeMounts:
   secrets: {}
 
 squid_config: |-
-  acl localnet src 0.0.0.1-0.255.255.255	# RFC 1122 "this" network (LAN)
-  acl localnet src 10.0.0.0/8		# RFC 1918 local private network (LAN)
-  acl localnet src 100.64.0.0/10		# RFC 6598 shared address space (CGN)
-  acl localnet src 169.254.0.0/16 	# RFC 3927 link-local (directly plugged) machines
-  acl localnet src 172.16.0.0/12		# RFC 1918 local private network (LAN)
-  acl localnet src 192.168.0.0/16		# RFC 1918 local private network (LAN)
-  acl localnet src fc00::/7       	# RFC 4193 local private network range
-  acl localnet src fe80::/10      	# RFC 4291 link-local (directly plugged) machines
-  acl SSL_ports port 443
-  acl Safe_ports port 80		# http
-  acl Safe_ports port 21		# ftp
-  acl Safe_ports port 443		# https
-  acl Safe_ports port 70		# gopher
-  acl Safe_ports port 210		# wais
-  acl Safe_ports port 1025-65535	# unregistered ports
-  acl Safe_ports port 280		# http-mgmt
-  acl Safe_ports port 488		# gss-http
-  acl Safe_ports port 591		# filemaker
-  acl Safe_ports port 777		# multiling http
-  acl CONNECT method CONNECT
-  http_access deny !Safe_ports
-  http_access deny CONNECT !SSL_ports
-  http_access allow localhost manager
-  http_access deny manager
-  http_access allow localhost
-  http_access allow localnet
-  http_access deny all
   http_port 3128
   coredump_dir /var/spool/squid
   refresh_pattern ^ftp:		1440	20%	10080
@@ -102,18 +75,73 @@ squid_config: |-
   refresh_pattern \/(Translation-.*)(|\.bz2|\.gz|\.xz)$ 0 0% 0 refresh-ims
   refresh_pattern .		0	20%	4320
   logfile_rotate 0
+  # disable pinger
+  pinger_enable off
+  # debug all
+  # debug_options ALL,1 33,2
+  #logformat squid_access %ts %>a %rm %>rd %>rP %rp %>Hs %<st %Ss %err_code
+  #access_log daemon:/var/log/squid/access.log squid_access
+  #
+  # Default parent proxy (upstream)
+  #cache_peer proxy.external parent 8080 0 no-query default
+  # Default traffic redirection to the parent
+  never_direct allow all
+
+  # Allowed port ACLs
+  acl SSL_ports port 443
+  acl Safe_ports port 80		# http
+  acl Safe_ports port 443		# https
+  acl CONNECT method CONNECT
+
+  # ACL sources
+  acl localhost src 127.0.0.1/32
+  acl localnet src 0.0.0.1-0.255.255.255	# RFC 1122 "this" network (LAN)
+  acl localnet src 10.0.0.0/8		# RFC 1918 local private network (LAN)
+  acl localnet src 100.64.0.0/10		# RFC 6598 shared address space (CGN)
+  acl localnet src 169.254.0.0/16 	# RFC 3927 link-local (directly plugged) machines
+  acl localnet src 172.16.0.0/12		# RFC 1918 local private network (LAN)
+  acl localnet src 192.168.0.0/16		# RFC 1918 local private network (LAN)
+  acl localnet src fc00::/7       	# RFC 4193 local private network range
+  acl localnet src fe80::/10      	# RFC 4291 link-local (directly plugged) machines
+  # === EXCLUDED zones from parent proxy (direct send) ===
+  # IPs or ranges sent directly
+  acl direct_ips dst 10.0.0.0/8
+  # Domains NOT to send to the parent proxy
+  acl direct_domains dstdomain .svc.cluster.local localhost
+
+  # Enforce direct routes (without proxy)
+  always_direct allow direct_ips
+  always_direct allow direct_domains
+
+  # === ALLOWED zones via parent proxy ===
+  # Allowed sites only (everything else blocked)
+  #acl allowed_sites dstdomain .google.fr .wikimedia.org
+  # here on allow all URLs
+  acl allowed_sites dstdomain .
+
+  # --- HTTP Access Control ---
+  # 1. Disallow everything except HTTP/HTTPS
+  http_access deny !Safe_ports
+  http_access deny CONNECT !SSL_ports
+  # 2. Allow only validated destinations
+  http_access allow allowed_sites
+  # 3. Everything else is blocked
+  http_access deny all
+  #
   include /etc/squid/conf.d/*
 
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-# livenessProbe:
-#   httpGet:
-#     path: /
-#     port: http
-
 livenessProbe:
+  tcpSocket:
+    port: 3128
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
 #  httpGet:
 #    path: /
 #    port: squid
@@ -124,7 +152,7 @@ livenessProbe:
 
 readinessProbe:
   tcpSocket:
-    port: squid
+    port: 3128
 #  httpGet:
 #    path: /
 #    port: squid
@@ -148,13 +176,16 @@ podAnnotations: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  seccompProfile:
+    type: "RuntimeDefault"
 
 service:
   enabled: true

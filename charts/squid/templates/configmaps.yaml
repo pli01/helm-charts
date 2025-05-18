@@ -3,8 +3,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "helmproj.fullname" . }}
-  namespace: {{ include "helmproj.namespace" . | quote }}
+  name: {{ template "squid.fullname" . }}
+  namespace: {{ include "squid.namespace" . | quote }}
 data:
   {{- range $key, $value := .Values.envFrom.configmaps }}
   {{ $key }}: {{ $value | quote }}
@@ -17,8 +17,8 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "helmproj.fullname" . }}-vols
-  namespace: {{ include "helmproj.namespace" . | quote }}
+  name: {{ template "squid.fullname" . }}-vols
+  namespace: {{ include "squid.namespace" . | quote }}
 data:
 {{- range $key, $value := .Values.volumeMounts.configmaps }}
   {{ $key }}: |-
@@ -30,8 +30,8 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "helmproj.fullname" . }}-config
-  namespace: {{ include "helmproj.namespace" . | quote }}
+  name: {{ template "squid.fullname" . }}-config
+  namespace: {{ include "squid.namespace" . | quote }}
 data:
   squid.conf: |-
     {{ .Values.squid_config | nindent 4}}

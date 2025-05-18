@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "helmproj.name" -}}
+{{- define "squid.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "helmproj.fullname" -}}
+{{- define "squid.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "helmproj.chart" -}}
+{{- define "squid.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "helmproj.labels" -}}
-helm.sh/chart: {{ include "helmproj.chart" . }}
-{{ include "helmproj.selectorLabels" . }}
+{{- define "squid.labels" -}}
+helm.sh/chart: {{ include "squid.chart" . }}
+{{ include "squid.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,17 +45,17 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "helmproj.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "helmproj.name" . }}
+{{- define "squid.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "squid.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "helmproj.serviceAccountName" -}}
+{{- define "squid.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
-{{- default (include "helmproj.fullname" .) .Values.serviceAccount.name }}
+{{- default (include "squid.fullname" .) .Values.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
@@ -64,7 +64,7 @@ Create the name of the service account to use
 {{/*
 Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
 */}}
-{{- define "helmproj.namespace" -}}
+{{- define "squid.namespace" -}}
     {{- if .Values.namespaceOverride -}}
         {{- print .Values.namespaceOverride -}}
     {{- else -}}
